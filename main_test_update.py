@@ -25,7 +25,15 @@ BLUE = (0, 0, 255)
 text_surf = font.render('Skyfall', False, ('#c55b56'))
 text_rect = text_surf.get_rect(center=(400, 150))
 
-cloud_surf = pygame.image.load('Graphics\\cloud.png').convert_alpha()
+game_over_text = font.render('Game Over', False, ('#c55b56'))
+game_over_rect = game_over_text.get_rect(center=(400, 150))
+
+main_menu_text = small_font.render("Click to return to Main Menu", True, (WHITE))
+main_menu_text_rect = main_menu_text.get_rect(center=(400, 300))
+
+
+
+cloud_surf = pygame.image.load('Graphics\cloud.png').convert_alpha()
 cloud_surf = pygame.transform.scale(cloud_surf, (155, 93))
 cloud_rect = cloud_surf.get_rect(center=(260, 160))
 cloud_rect_2 = cloud_surf.get_rect(center=(550, 120))
@@ -37,14 +45,27 @@ cloud_rect_4 = cloud_surf_2.get_rect(topleft=(545, 480))
 overlay_shape = pygame.surface.Surface((774, 568))
 overlay_rect = overlay_shape.get_rect(center=(400, 300))
 
-play_btn = pygame.image.load('Graphics\\playbutton.png').convert_alpha()
+play_btn = pygame.image.load('Graphics\playbutton.png').convert_alpha()
 play_btn_rect = play_btn.get_rect(topleft=(185, 260))
 
-shop_btn = pygame.image.load('Graphics\\shopbutton.png').convert_alpha()
+shop_btn = pygame.image.load('Graphics\shopbutton.png').convert_alpha()
 shop_btn_rect = shop_btn.get_rect(topleft=(438, 260))
 
-highscore_panel = pygame.image.load('Graphics\\highscorepanel.png').convert_alpha()
+highscore_panel = pygame.image.load('Graphics\highscorepanel.png').convert_alpha()
 highscore_panel_rect = highscore_panel.get_rect(topleft=(193, 358))
+
+mapchooser = pygame.image.load('Graphics\map_panel.png').convert_alpha()
+mapchooser_rect = mapchooser.get_rect(center=(400, 300))
+
+classic_btn = pygame.image.load('Graphics\classic_btn.png').convert_alpha()
+classic_btn_rect = classic_btn.get_rect(center=(220, 260))
+
+space_btn = pygame.image.load('Graphics\space_btn.png').convert_alpha()
+space_btn_rect = space_btn.get_rect(center=(350, 260))
+
+# storm_btn = pygame.image.load('Graphics\storm_btn.png').convert_alpha()
+# storm_btn_rect = storm_btn.get_rect(center=(500, 260))
+
 
 # Gameplay variables
 player = pygame.Rect(400 - 25, 520, 50, 50)
@@ -83,14 +104,17 @@ def spawn_ability():
     ability_type = random.choice(["invincible", "break"])
     abilities.append({"rect": pygame.Rect(x, -30, 30, 30), "type": ability_type})
 
-# ========================= MAIN LOOP ==============================
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+def update_block_speed(score):
+    base_speed = 6
+    max_speed = 50
+    increment = score // 500
+    return min(base_speed + increment, max_speed)
 
-    # ========================= MENU SCREEN =========================
+
+# Main game loop
+while True:
+
+    # Menu screen
     if game_state == 'menu':
         screen.fill(SKY_COLOR)
         pygame.draw.rect(screen, OVERLAY_COLOR, overlay_rect, 500, border_radius=15)
@@ -103,16 +127,54 @@ while True:
         screen.blit(cloud_surf_2, cloud_rect_3)
         screen.blit(cloud_surf_2, cloud_rect_4)
 
-        # Button clicks
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if play_btn_rect.collidepoint(event.pos):
-                reset_game()
-                game_state = 'playing'
-            elif shop_btn_rect.collidepoint(event.pos):
-                game_state = 'shop'
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        # Navigation to different screens
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if play_btn_rect.collidepoint(event.pos):
+                    game_state = 'choosing'
+                elif shop_btn_rect.collidepoint(event.pos):
+                    game_state = 'shop'
 
     # ========================= GAMEPLAY ============================
-    elif game_state == 'playing':
+    elif game_state == 'choosing':
+        screen.blit(mapchooser, mapchooser_rect)
+        screen.blit(classic_btn, classic_btn_rect)
+        # screen.blit(space_btn, space_btn_rect)
+        # screen.blit(storm_btn, storm_btn_rect)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if classic_btn_rect.collidepoint(event.pos):
+                    reset_game()
+                    game_state = 'playing1'
+
+    elif game_state == 'game_over':
+        screen.blit(game_over_text, game_over_rect)
+        screen.blit(main_menu_text, main_menu_text_rect)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                game_state = 'menu'
+
+    elif game_state == 'playing1':
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] and player.left > 0:
             player.x -= player_speed
@@ -121,6 +183,7 @@ while True:
 
         spawn_timer += 1
         score += 1  # score increases as time passes
+        block_speed = update_block_speed(score)
 
         if spawn_timer % 40 == 0:
             spawn_block()
@@ -146,7 +209,7 @@ while True:
                 if break_blocks:
                     blocks.remove(block)
                 elif not invincible:
-                    game_state = 'menu'
+                    game_state = 'game_over' # ADD GAME OVER LOGIC HERE
 
         # Move abilities
         for ability in abilities[:]:
@@ -175,9 +238,9 @@ while True:
             pygame.draw.circle(screen, color, ability["rect"].center, 15)
 
         if invincible:
-            pygame.draw.circle(screen, YELLOW, player.center, 30, 3)
+            pygame.draw.circle(screen, YELLOW, player.center, 30, 3) # ADD visual indicator for invincibility
         if break_blocks:
-            pygame.draw.circle(screen, GREEN, player.center, 30, 3)
+            pygame.draw.circle(screen, GREEN, player.center, 30, 3) # ADD visual indicator for break ability
 
         # Score display
         score_text = small_font.render(f"Score: {score}", True, (0, 0, 0))
